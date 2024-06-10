@@ -1,15 +1,5 @@
 from setuptools import setup , find_packages
 
-
-
-setup(name="crystine",
-      version='0.1',
-      description="data analysis for compuational",
-      packages=["crystine"],
-      author_email="anandsr724@gmail.com",
-      zip_safe=False)
-
-
 classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',
