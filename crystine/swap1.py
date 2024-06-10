@@ -3,7 +3,7 @@ import argparse
 
 def another(ymax,ymin):
     print(ymax , ymin)
-    print("Average is: "(ymax+ymin)/2)
+    print("Average is: ",(ymax+ymin)/2)
 
 def ret_parser():
     parser = argparse.ArgumentParser(
