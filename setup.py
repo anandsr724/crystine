@@ -15,6 +15,8 @@ setup(
         'console_scripts': [
             'swap1=crystine.swap1:main',
             'swap2=crystine.swap2:main',
+            'ginfo=crystine.ginfo:main',
+            
         ],
     },
     install_requires=[
