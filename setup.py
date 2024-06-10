@@ -9,7 +9,7 @@ classifiers=[
 
 setup(
     name='crystine',
-    version='0.1.2',
+    version='0.1.3',
     packages=find_packages(),
     entry_points={
         'console_scripts': [
