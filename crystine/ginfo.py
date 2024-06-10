@@ -2,8 +2,18 @@ import pandas as pd
 import re
 import numpy as np
 import sys
+import argparse
 
-def process_file(input_file, output_file):
+
+def ret_parser():
+    parser = argparse.ArgumentParser(
+        description="Extracts info from your OUTCAR file")
+    parser.add_argument(
+        "--excel", type=int, default=1, help="1 if you want to write data of VBM CBM of all K-Points in in excel file"
+    )
+    return parser
+
+def process_file(input_file, output_file,excel_gen):
     # Read the text file into a list of lines
 
     #change this according to your OUTCAR
@@ -166,7 +176,7 @@ def process_file(input_file, output_file):
     print("Band Gap Type : ",typee)
     print(onee)
     
-    excel_gen = int(input('Should I write data of VBM CBM of all K-Points in in excel file (1 or 0)?\n'))
+    # excel_gen = int(input('Should I write data of VBM CBM of all K-Points in in excel file (1 or 0)?\n'))
     if(excel_gen==1):
         filtered_df.to_excel(output_file+".xlsx", index=False, engine='openpyxl')
         print(output_file+".xlsx"+" file written.")
@@ -178,14 +188,19 @@ def process_file(input_file, output_file):
     print(output_file+".log file written.")
 
 
-#main starts from here 
+def main():
+    #main starts from here 
 
-print("___________________________")
-print("|   Welcome to Cristina   |")
-print("___________________________")
+    print("___________________________")
+    print("|  Welcome, I'm Crystine   |")
+    print("___________________________")
 
 
-input_file_path = './OUTCAR_doexcel'  # Replace with your actual file path
-#later rename the above file to OUTCAR
-output_file_path = "ginfo"
-process_file(input_file_path, output_file_path)
+    input_file_path = './OUTCAR'  # Replace with your actual file path
+    #later rename the above file to OUTCAR
+    output_file_path = "ginfo"
+    args = ret_parser().parse_args()
+    process_file(input_file_path, output_file_path,excel_gen=args.excel)
+
+if __name__ == "__main__":
+    main()
