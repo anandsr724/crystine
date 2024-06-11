@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import re
 import matplotlib.pyplot as plt
+import sys
+import argparse
 
 
 
@@ -203,190 +205,242 @@ def mass_cal(final_df,image_name):
     return mass,equation
 
 
-################################################
-#take input
 
-#if using the dat file from sumo - use 1
+def info_from_outcar(OUTCAR_path):
+        ################################################
+    #extracting data from OUTCAR
 
-print("-------------------------")
-print("-- Effective Mass Calculator")
-print("Make sure OUTCAR and band.dat or BAND.dat are present in the same directory")
-print("-------------------------\n")
-
-directory_path=str(input("Enter you current Path:\n"))
-OUTCAR_path=directory_path+'OUTCAR'
-
-
-
-# generating .dat file
-# vr_files = ["path/to/vasprun.xml"]
-# generate_band_dat(vr_files)
+    #find the line that has data of NKPTS and NELECT
+    with open(OUTCAR_path, 'r') as f:
+        for line in f.readlines():
+            if 'k-points           NKPTS =' in line:
+                band_line=line
+            if 'NELECT =' in line:
+                nelec_line=line
 
 
-using_sumo = bool(input("Enter 1 if data extrated from SUMO , 0 if extracted from Vaspkit ?\n"))
-
-lim_kpoints=int(input("How many K-Points you want to consider ?\n"))
-#lim_kpoints-=1
-
-excel_path=str(input("Excel file name? \n"))+'.xlsx'
-excel_path=directory_path+excel_path
-################################################
-
-if(using_sumo==1):
-    parent_datPath=directory_path+"band.dat"
-else:
-    parent_datPath=directory_path+"BAND.dat"
-
-################################################
-#extracting data from OUTCAR
-
-#find the line that has data of NKPTS and NELECT
-with open(OUTCAR_path, 'r') as f:
-    for line in f.readlines():
-        if 'k-points           NKPTS =' in line:
-            band_line=line
-        if 'NELECT =' in line:
-            nelec_line=line
+    # print("band line",band_line)
+    # print("nelec_line",nelec_line)
 
 
-# print("band line",band_line)
-# print("nelec_line",nelec_line)
+    #extract all the numbers from the string and convert them into a list
+    s1 = [float(s) for s in re.findall(r'-?\d+\.?\d*', nelec_line)]
+    # print(nelec_line)
+
+    NELECT=s1[0]     #check the number of electrons to find the VBM number
+
+    s2 = [float(s) for s in re.findall(r'-?\d+\.?\d*', band_line)]
+    # print(band_line)
+
+    NKPTS=s2[0]
+
+    return NELECT , NKPTS 
 
 
-#extract all the numbers from the string and convert them into a list
-s1 = [float(s) for s in re.findall(r'-?\d+\.?\d*', nelec_line)]
-# print(nelec_line)
-
-NELECT=s1[0]     #check the number of electrons to find the VBM number
-
-s2 = [float(s) for s in re.findall(r'-?\d+\.?\d*', band_line)]
-# print(band_line)
-
-NKPTS=s2[0]
-print("NKPTS from OUTCAR = ",NKPTS)
-
-NKPTS_dat=kp_FromDat(parent_datPath,using_sumo)   #find the no of kpoints manually / from the band.dat file
-print("NKPTS from .dat file = ",NKPTS_dat)
-
-if(NKPTS_dat != NKPTS):
-    print("I will be using No. K-Points = " , NKPTS_dat , " for this calculation")
-    NKPTS=NKPTS_dat
-
-# print("kpoints is", NKPTS)
-# print("nelec is", NELECT)
-# print("sumo??" , using_sumo)
-################################################
-
-
-################################################
-#handling .dat file
-vb=NELECT/2    # index of valance band = nelect/2
-cb=vb+1
-
-print('VB is ', vb)
-print('CB is ', cb)
-print('- - - - -')
-
-
-start_line_vb = startingPoint(vb,NKPTS,sumo=using_sumo)
-end_line_vb   = endingPoint(vb,NKPTS,sumo=using_sumo)
-
-# print("starting line = ",start_line_vb, " ending line = ",end_line_vb)
-
-#cb = vb+1
-
-start_line_cb=startingPoint(cb,NKPTS,sumo=using_sumo)
-end_line_cb=endingPoint(cb,NKPTS,sumo=using_sumo)
-
-# print("starting line = ",start_line_cb, " ending line = ",end_line_cb)
-
-# data of VB and CB is extracted in to the files named VBM and CBM
-
-#change this if you want to change the name of the seprate VBM CBM files
-
-VBM_path=directory_path+"VBM"
-CBM_path=directory_path+"CBM"
-
-extract_lines(parent_datPath,VBM_path,start_line_vb,end_line_vb)
-extract_lines(parent_datPath,CBM_path,start_line_cb,end_line_cb)
-
-
-#till now you have vbm.dat and cbm.dat file 
-#till now this code need the OUTCAR file and band.dat file (both sumo or vaspkit will work)
-
-data_vbm = np.loadtxt(VBM_path,unpack=True)
-x_vbm=data_vbm[0]
-y_vbm=data_vbm[1]
-
-#put all the values from VBM to a data frame
-df_vbm = pd.DataFrame({'band_index':x_vbm, 'energy':y_vbm})
-
-
-data_cbm = np.loadtxt(CBM_path,unpack=True)
-x_cbm=data_cbm[0]
-y_cbm=data_cbm[1]
-
-#put all the values from VBM to a data frame
-df_cbm = pd.DataFrame({'band_index':x_cbm, 'energy':y_cbm})
-
-#both the data is in a dataframe
-################################################
-
-
-vb_back=band_selection(df_vbm,lim_kpoints,band_type='vb',direc=False)
-vb_next=band_selection(df_vbm,lim_kpoints,band_type='vb',direc=True)
-cb_back=band_selection(df_cbm,lim_kpoints,band_type='cb',direc=False)
-cb_next=band_selection(df_cbm,lim_kpoints,band_type='cb',direc=True)
-
-# all set just put intoexcel
- 
-
-ex_col=1
-ex_row=1
-
-cb_back.to_excel(excel_path, index=False, engine='openpyxl', startcol=ex_col, startrow=ex_row)
-with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a',if_sheet_exists="overlay") as writer:
-        my_text=pd.DataFrame(["CB Next"])
-        my_text.to_excel( writer, index=False, sheet_name='Sheet1',startcol=ex_col-1, startrow=ex_row)
-
-
-#to update the row
-ex_row=in_excel('CB Back', cb_back , excel_path , ex_row , ex_col,lim_kpoints)
-ex_row=in_excel('CB Next', cb_next , excel_path , ex_row , ex_col,lim_kpoints)
-ex_row=in_excel('VB Back', vb_back , excel_path , ex_row , ex_col,lim_kpoints)
-ex_row=in_excel('VB Next', vb_next , excel_path , ex_row , ex_col,lim_kpoints)
+######
+# data extracted from OUTCAR 
+###
+     
 
 
 
-# print('CB Back\n', cb_back )
-# print('CB Next\n', cb_next )
-# print('VB Back\n', vb_back )
-# print('VB Next\n', vb_next )
+def info_from_dat(input_file_path):
+    
+    using_sumo =1 
+    
+    NELECT, NKPTS   = info_from_outcar("./OUTCAR")
+
+    print("NKPTS from OUTCAR = ",NKPTS)
+
+    #generate band.dat file here
+
+    # modify dat path here
+    parent_datPath=input_file_path+'band.dat'  
 
 
-#uncomment the below code to generate the log file
+    NKPTS_dat=kp_FromDat(parent_datPath,using_sumo)   #find the no of kpoints manually / from the band.dat file
+    print("NKPTS from .dat file = ",NKPTS_dat)
 
-print('CB Back\n', cb_back )
-cb_back_mass,cb_back_eq=mass_cal(cb_back,"CB_back")
-print('- - -')
-print('CB Next\n', cb_next )
-cb_next_mass,cb_next_eq=mass_cal(cb_next,"CB_next")
-print('- - -')
-print('VB Back\n', vb_back )
-vb_back_mass,vb_back_eq=mass_cal(vb_back,"VB_back")
-print('- - -')
-print('VB Next\n', vb_next )
-vb_next_mass,vb_next_eq=mass_cal(vb_next,"VB_next")
-print('- - -')
+    if(NKPTS_dat != NKPTS):
+        print("I will be using No. K-Points = " , NKPTS_dat , " for this calculation")
+        NKPTS=NKPTS_dat
+
+    #handling .dat file
+    vb=NELECT/2    # index of valance band = nelect/2
+    cb=vb+1
+
+    print('VB is ', vb)
+    print('CB is ', cb)
+    print('- - - - -')
+
+    data = np.loadtxt( 'band.dat' )
+    data_vbm = data[int(NKPTS*(int(vb)-1)):int(NKPTS*(int(vb+1)-1))]
 
 
-file1 = open(directory_path+"eff_mass_log.txt", "w")
-L = ["Effective Mass Calculation \n", ]
-L.append("_________\n"+"CB_Back\n"+str(cb_back_eq)+"\n"+"Mass = "+str(cb_back_mass)+"\n_________\n")
-L.append("_________\n"+"CB_Next\n"+str(cb_next_eq)+"\n"+"Mass = "+str(cb_next_mass)+"\n_________\n")
-L.append("_________\n"+"VB_Back\n"+str(vb_back_eq)+"\n"+"Mass = "+str(vb_back_mass)+"\n_________\n")
-L.append("_________\n"+"VB_Next\n"+str(vb_next_eq)+"\n"+"Mass = "+str(vb_next_mass)+"\n_________\n")
+    # data_vbm = np.loadtxt(VBM_path,unpack=True)
+    x_vbm=data_vbm[:,0]
+    y_vbm=data_vbm[:,1]
 
-# \n is placed to indicate EOL (End of Line)
-file1.writelines(L)
-file1.close()  # to change file access modes.
+    #put all the values from VBM to a data frame
+    df_vbm = pd.DataFrame({'band_index':x_vbm, 'energy':y_vbm})
+
+
+
+    data_cbm = data[int(NKPTS*(int(cb)-1)):int(NKPTS*(int(cb+1)-1))]
+    # data_cbm=
+    # data_cbm = np.loadtxt(CBM_path,unpack=True)
+    x_cbm=data_cbm[:,0]
+    y_cbm=data_cbm[:,1]
+
+    #put all the values from VBM to a data frame
+    df_cbm = pd.DataFrame({'band_index':x_cbm, 'energy':y_cbm})
+    
+
+    return df_vbm , df_cbm
+
+
+
+def initiate(input_file_path, output_file_path,excel_gen=0,use_existing_dat=1,gen_vbcb_files=1):
+
+
+        
+    ################################################
+    #take input
+
+    #if using the dat file from sumo - use 1
+
+    print("-------------------------")
+    print("-- Effective Mass Calculator")
+    print("Make sure OUTCAR and band.dat or BAND.dat are present in the same directory")
+    print("-------------------------\n")
+
+    # directory_path=str(input("Enter you current Path:\n"))
+    directory_path="./"
+    OUTCAR_path=directory_path+'OUTCAR'
+
+
+    # generating .dat file
+    # vr_files = ["path/to/vasprun.xml"]
+    # generate_band_dat(vr_files)
+
+    # using_sumo = bool(input("Enter 1 if data extrated from SUMO , 0 if extracted from Vaspkit ?\n"))
+    using_sumo = True
+
+    # lim_kpoints=int(input("How many K-Points you want to consider ?\n"))
+    lim_kpoints=4
+    #lim_kpoints-=1
+
+    # excel_path=str(input("Excel file name? \n"))+'.xlsx'
+    excel_path="temp"+'.xlsx'
+    excel_path=directory_path+excel_path
+    ################################################
+    ######
+    # data extracted from OUTCAR 
+    ###
+
+    df_vbm , df_cbm  = info_from_dat(input_file_path)
+
+    # after the data is loaded into df code will handle
+
+
+    #both the data is in a dataframe
+    ################################################
+
+
+    vb_back=band_selection(df_vbm,lim_kpoints,band_type='vb',direc=False)
+    vb_next=band_selection(df_vbm,lim_kpoints,band_type='vb',direc=True)
+    cb_back=band_selection(df_cbm,lim_kpoints,band_type='cb',direc=False)
+    cb_next=band_selection(df_cbm,lim_kpoints,band_type='cb',direc=True)
+
+    # all set just put intoexcel
+
+
+    """
+    for excel 
+    ex_col=1
+    ex_row=1
+
+    cb_back.to_excel(excel_path, index=False, engine='openpyxl', startcol=ex_col, startrow=ex_row)
+    with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a',if_sheet_exists="overlay") as writer:
+            my_text=pd.DataFrame(["CB Next"])
+            my_text.to_excel( writer, index=False, sheet_name='Sheet1',startcol=ex_col-1, startrow=ex_row)
+
+
+    #to update the row
+    ex_row=in_excel('CB Back', cb_back , excel_path , ex_row , ex_col,lim_kpoints)
+    ex_row=in_excel('CB Next', cb_next , excel_path , ex_row , ex_col,lim_kpoints)
+    ex_row=in_excel('VB Back', vb_back , excel_path , ex_row , ex_col,lim_kpoints)
+    ex_row=in_excel('VB Next', vb_next , excel_path , ex_row , ex_col,lim_kpoints)
+    """
+
+
+
+    # print('CB Back\n', cb_back )
+    # print('CB Next\n', cb_next )
+    # print('VB Back\n', vb_back )
+    # print('VB Next\n', vb_next )
+
+
+    #uncomment the below code to generate the log file
+
+    print('CB Back\n', cb_back )
+    cb_back_mass,cb_back_eq=mass_cal(cb_back,"CB_back")
+    print('- - -')
+    print('CB Next\n', cb_next )
+    cb_next_mass,cb_next_eq=mass_cal(cb_next,"CB_next")
+    print('- - -')
+    print('VB Back\n', vb_back )
+    vb_back_mass,vb_back_eq=mass_cal(vb_back,"VB_back")
+    print('- - -')
+    print('VB Next\n', vb_next )
+    vb_next_mass,vb_next_eq=mass_cal(vb_next,"VB_next")
+    print('- - -')
+
+    """
+
+    file1 = open(directory_path+"eff_mass_log.txt", "w")
+    L = ["Effective Mass Calculation \n", ]
+    L.append("_________\n"+"CB_Back\n"+str(cb_back_eq)+"\n"+"Mass = "+str(cb_back_mass)+"\n_________\n")
+    L.append("_________\n"+"CB_Next\n"+str(cb_next_eq)+"\n"+"Mass = "+str(cb_next_mass)+"\n_________\n")
+    L.append("_________\n"+"VB_Back\n"+str(vb_back_eq)+"\n"+"Mass = "+str(vb_back_mass)+"\n_________\n")
+    L.append("_________\n"+"VB_Next\n"+str(vb_next_eq)+"\n"+"Mass = "+str(vb_next_mass)+"\n_________\n")
+
+    # \n is placed to indicate EOL (End of Line)
+    file1.writelines(L)
+    file1.close()  # to change file access modes.
+
+    """
+
+
+def ret_parser():
+    parser = argparse.ArgumentParser(
+        description="Extracts info from your OUTCAR file")
+    parser.add_argument(
+        "--excel", type=int, default=1, help="generate excel file"
+    )
+    parser.add_argument(
+        "--dat", type=int, default=0, help="use exisiting band.dat file"
+    )
+    parser.add_argument(
+        "--vbcb", type=int, default=0, help="generate seprate files of selected bands"
+    )
+    return parser
+
+
+def main():
+    #main starts from here 
+
+    print("___________________________")
+    print("|  Welcome, I'm Crystine   |")
+    print("___________________________")
+
+
+    input_file_path = './'  # Replace with your actual file path
+    #later rename the above file to OUTCAR
+    output_file_path = "gmass"
+    args = ret_parser().parse_args()
+    # initiate(input_file_path, output_file_path,excel_gen=args.excel)
+    initiate(input_file_path, output_file_path,excel_gen=args.excel,use_existing_dat=args.dat,gen_vbcb_files=args.vbcb)
+
+if __name__ == "__main__":
+    main()
