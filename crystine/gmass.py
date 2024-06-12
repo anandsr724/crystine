@@ -6,13 +6,23 @@ import re
 import matplotlib.pyplot as plt
 import sys
 import argparse
-
-
-
 import os
 from pymatgen.io.vasp.outputs import BSVasprun
 from pymatgen.electronic_structure.plotter import BSDOSPlotter
 from pymatgen.electronic_structure.bandstructure import get_reconstructed_band_structure, Spin
+
+# done = False
+#here is the animation
+def animate():
+    for c in itertools.cycle(['|', '/', '-', '\\']):
+        if done:
+            break
+        sys.stdout.write('\rloading ' + c)
+        sys.stdout.flush()
+        time.sleep(0.1)
+    sys.stdout.write('\rDone! ')
+    sys.stdout.write('\n')
+
 
 def generate_band_dat(vr_files):
     bandstructures = []
@@ -62,14 +72,18 @@ def extract_lines(input_file, output_file, start_line=12, end_line=34):
         outfile.write(line)
 
 
-def startingPoint(bandNum,kp_num,sumo): 
-      if(sumo==True):
+def startingPoint(bandNum,kp_num,dat_type=1):
+      # type 1 is for sumo type of files
+      #customize this for type 2
+      if(dat_type==1):
           return 2+(bandNum-1)*kp_num+(bandNum-1)
       else:
          return 4+(bandNum-1)*kp_num+(bandNum-1)*2
       
-def endingPoint(bandNum,kp_num,sumo):
-      return startingPoint(bandNum,kp_num,sumo)+kp_num-1
+def endingPoint(bandNum,kp_num,dat_type=1):
+      # type 1 is for sumo type of files
+      #customize this for type 2
+      return startingPoint(bandNum,kp_num,dat_type)+kp_num-1
 
 def remove_space_and_get_words_and_numbers(text):
     # Remove all spaces from the text
@@ -122,10 +136,10 @@ def in_excel( my_text , my_df , excel_path , ex_row , ex_col , lim_kpoints):
     #to update the row
     return ex_row+lim_kpoints+3
 
-def kp_FromDat(parent_datPath,using_sum):
+def kp_FromDat(parent_datPath,dat_type=1):
      
-    using_sumo=1
-    if using_sumo==1:
+    # check if it works for type 2
+    if dat_type==1:
         start_dat=1 #index 1
     else: 
         start_dat=3 #index 3
@@ -174,8 +188,8 @@ def mass_cal(final_df,image_name):
     # print(final_df)
     # print("df is \n")
 
-    print("2 degree polynomail fit =>  " , c[0],"x^2 + ",c[1],"x" )
-    equation = str("2 degree polynomail fit =>  " + c[0]+"x^2 + "+c[1]+"x")
+    print("2 degree polynomial fit =>  " , c[0],"x^2 + ",c[1],"x" )
+    equation = str("2 degree polynomial fit =>  " + c[0]+"x^2 + "+c[1]+"x")
     
     # Uncomment this to visualize the polyfit
     
@@ -205,6 +219,58 @@ def mass_cal(final_df,image_name):
     return mass,equation
 
 
+'''
+Generate band.dat file
+'''
+
+done=False
+def generate_band_dat(vr_files):
+    bandstructures = []
+    t = threading.Thread(target=animate)
+    t.start()
+    # long process here
+    # time.sleep(10)
+
+
+    for vr_file in vr_files:
+        vr = BSVasprun(vr_file, parse_projected_eigen=False)
+        bs = vr.get_band_structure(line_mode=True)
+        bandstructures.append(bs)
+    bs = get_reconstructed_band_structure(bandstructures)
+    
+    global done 
+    done = True
+    return save_band_dat(bs)
+
+def save_band_dat(bs, prefix=None, directory=None):
+    filename = f"{prefix}_band_crstine.dat" if prefix else "band_crystine.dat"
+    directory = directory if directory else "."
+    filename = os.path.join(directory, filename)
+
+    if bs.is_metal():
+        zero = bs.efermi
+    else:
+        zero = bs.get_vbm()["energy"]
+        
+
+    with open(filename, "w") as f:
+        header = "#k-distance eigenvalue[eV]\n"
+        f.write(header)
+
+        for band in bs.bands[Spin.up]:
+            for d, e in zip(bs.distance, band):
+                f.write(f"{d:.8f} {e - zero:.8f}\n")
+            f.write("\n")
+
+        if bs.is_spin_polarized:
+            for band in bs.bands[Spin.down]:
+                for d, e in zip(bs.distance, band):
+                    f.write(f"{d:.8f} {e - zero:.8f}\n")
+                f.write("\n")
+
+    return filename
+###          ^^^^^generate .dat file^^^^
+
 
 def info_from_outcar(OUTCAR_path):
         ################################################
@@ -221,7 +287,6 @@ def info_from_outcar(OUTCAR_path):
 
     # print("band line",band_line)
     # print("nelec_line",nelec_line)
-
 
     #extract all the numbers from the string and convert them into a list
     s1 = [float(s) for s in re.findall(r'-?\d+\.?\d*', nelec_line)]
@@ -241,12 +306,16 @@ def info_from_outcar(OUTCAR_path):
 # data extracted from OUTCAR 
 ###
      
+import itertools
+import threading
+import time
+import sys
 
 
 
-def info_from_dat(input_file_path):
+def info_from_dat(input_file_path,use_existing_dat=0,dat_type=1):
     
-    using_sumo =1 
+    # using_sumo =1 
     
     NELECT, NKPTS   = info_from_outcar("./OUTCAR")
 
@@ -255,10 +324,29 @@ def info_from_dat(input_file_path):
     #generate band.dat file here
 
     # modify dat path here
-    parent_datPath=input_file_path+'band.dat'  
+    if (use_existing_dat==0):
+        # generating .dat file
+        vr_files = [input_file_path+"/vasprun.xml"]
+        print("generating band_crystine.dat")
+        # t = threading.Thread(target=animate)
+        # t.start()
+        #long process here
+        # time.sleep(10)
+        generate_band_dat(vr_files)
+        # done = True
 
 
-    NKPTS_dat=kp_FromDat(parent_datPath,using_sumo)   #find the no of kpoints manually / from the band.dat file
+
+
+        parent_datPath=input_file_path+'/band_crystine.dat'
+    elif(use_existing_dat==1):
+
+        #customise here for dat type 2
+        parent_datPath=input_file_path+'/band.dat'  
+
+
+    print("Fetching data from ",parent_datPath)
+    NKPTS_dat=kp_FromDat(parent_datPath,dat_type=1)   #find the no of kpoints manually / from the band.dat file
     print("NKPTS from .dat file = ",NKPTS_dat)
 
     if(NKPTS_dat != NKPTS):
@@ -273,7 +361,8 @@ def info_from_dat(input_file_path):
     print('CB is ', cb)
     print('- - - - -')
 
-    data = np.loadtxt( 'band.dat' )
+    #customise this part for type 2 .dat file
+    data = np.loadtxt(parent_datPath)
     data_vbm = data[int(NKPTS*(int(vb)-1)):int(NKPTS*(int(vb+1)-1))]
 
 
@@ -284,8 +373,6 @@ def info_from_dat(input_file_path):
     #put all the values from VBM to a data frame
     df_vbm = pd.DataFrame({'band_index':x_vbm, 'energy':y_vbm})
 
-
-
     data_cbm = data[int(NKPTS*(int(cb)-1)):int(NKPTS*(int(cb+1)-1))]
     # data_cbm=
     # data_cbm = np.loadtxt(CBM_path,unpack=True)
@@ -295,28 +382,19 @@ def info_from_dat(input_file_path):
     #put all the values from VBM to a data frame
     df_cbm = pd.DataFrame({'band_index':x_cbm, 'energy':y_cbm})
     
-
     return df_vbm , df_cbm
 
 
+def initiate(input_file_path="./", output_file_path = "gmass" ,excel_gen=0,use_existing_dat=1,dat_type=1,gen_vbcb_files=1):
 
-def initiate(input_file_path, output_file_path,excel_gen=0,use_existing_dat=1,gen_vbcb_files=1):
-
-
-        
     ################################################
     #take input
 
     #if using the dat file from sumo - use 1
 
-    print("-------------------------")
-    print("-- Effective Mass Calculator")
-    print("Make sure OUTCAR and band.dat or BAND.dat are present in the same directory")
-    print("-------------------------\n")
-
     # directory_path=str(input("Enter you current Path:\n"))
-    directory_path="./"
-    OUTCAR_path=directory_path+'OUTCAR'
+
+    OUTCAR_path=input_file_path+'OUTCAR'
 
 
     # generating .dat file
@@ -324,21 +402,21 @@ def initiate(input_file_path, output_file_path,excel_gen=0,use_existing_dat=1,ge
     # generate_band_dat(vr_files)
 
     # using_sumo = bool(input("Enter 1 if data extrated from SUMO , 0 if extracted from Vaspkit ?\n"))
-    using_sumo = True
+    # using_sumo = True
 
     # lim_kpoints=int(input("How many K-Points you want to consider ?\n"))
     lim_kpoints=4
     #lim_kpoints-=1
 
     # excel_path=str(input("Excel file name? \n"))+'.xlsx'
-    excel_path="temp"+'.xlsx'
-    excel_path=directory_path+excel_path
+    excel_path=input_file_path+"/"+output_file_path+'.xlsx'
+    # excel_path=input_file_path+excel_path
     ################################################
     ######
     # data extracted from OUTCAR 
     ###
 
-    df_vbm , df_cbm  = info_from_dat(input_file_path)
+    df_vbm , df_cbm  = info_from_dat(input_file_path,use_existing_dat,dat_type)
 
     # after the data is loaded into df code will handle
 
@@ -355,23 +433,24 @@ def initiate(input_file_path, output_file_path,excel_gen=0,use_existing_dat=1,ge
     # all set just put intoexcel
 
 
-    """
-    for excel 
-    ex_col=1
-    ex_row=1
+    
+    if excel_gen==1:
+        # for excel 
+        ex_col=1
+        ex_row=1
 
-    cb_back.to_excel(excel_path, index=False, engine='openpyxl', startcol=ex_col, startrow=ex_row)
-    with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a',if_sheet_exists="overlay") as writer:
-            my_text=pd.DataFrame(["CB Next"])
-            my_text.to_excel( writer, index=False, sheet_name='Sheet1',startcol=ex_col-1, startrow=ex_row)
+        cb_back.to_excel(excel_path, index=False, engine='openpyxl', startcol=ex_col, startrow=ex_row)
+        with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a',if_sheet_exists="overlay") as writer:
+                my_text=pd.DataFrame(["CB Next"])
+                my_text.to_excel( writer, index=False, sheet_name='Sheet1',startcol=ex_col-1, startrow=ex_row)
 
 
-    #to update the row
-    ex_row=in_excel('CB Back', cb_back , excel_path , ex_row , ex_col,lim_kpoints)
-    ex_row=in_excel('CB Next', cb_next , excel_path , ex_row , ex_col,lim_kpoints)
-    ex_row=in_excel('VB Back', vb_back , excel_path , ex_row , ex_col,lim_kpoints)
-    ex_row=in_excel('VB Next', vb_next , excel_path , ex_row , ex_col,lim_kpoints)
-    """
+        #to update the row
+        ex_row=in_excel('CB Back', cb_back , excel_path , ex_row , ex_col,lim_kpoints)
+        ex_row=in_excel('CB Next', cb_next , excel_path , ex_row , ex_col,lim_kpoints)
+        ex_row=in_excel('VB Back', vb_back , excel_path , ex_row , ex_col,lim_kpoints)
+        ex_row=in_excel('VB Next', vb_next , excel_path , ex_row , ex_col,lim_kpoints)
+        print(excel_path,"file written.")
 
 
 
@@ -383,22 +462,25 @@ def initiate(input_file_path, output_file_path,excel_gen=0,use_existing_dat=1,ge
 
     #uncomment the below code to generate the log file
 
-    print('CB Back\n', cb_back )
+    
     cb_back_mass,cb_back_eq=mass_cal(cb_back,"CB_back")
-    print('- - -')
-    print('CB Next\n', cb_next )
     cb_next_mass,cb_next_eq=mass_cal(cb_next,"CB_next")
-    print('- - -')
-    print('VB Back\n', vb_back )
     vb_back_mass,vb_back_eq=mass_cal(vb_back,"VB_back")
-    print('- - -')
-    print('VB Next\n', vb_next )
     vb_next_mass,vb_next_eq=mass_cal(vb_next,"VB_next")
-    print('- - -')
+    print("- - - - -")
+    # print('CB Back\n', cb_back )
+    # print('- - -')
+    # print('CB Next\n', cb_next )
+    # print('- - -')
+    # print('VB Back\n', vb_back )
+    # print('- - -')
+    # print('VB Next\n', vb_next )
+    # print('- - -')
 
-    """
+    
+    
 
-    file1 = open(directory_path+"eff_mass_log.txt", "w")
+    file1 = open(input_file_path+"/"+output_file_path+".log", "w")
     L = ["Effective Mass Calculation \n", ]
     L.append("_________\n"+"CB_Back\n"+str(cb_back_eq)+"\n"+"Mass = "+str(cb_back_mass)+"\n_________\n")
     L.append("_________\n"+"CB_Next\n"+str(cb_next_eq)+"\n"+"Mass = "+str(cb_next_mass)+"\n_________\n")
@@ -408,8 +490,7 @@ def initiate(input_file_path, output_file_path,excel_gen=0,use_existing_dat=1,ge
     # \n is placed to indicate EOL (End of Line)
     file1.writelines(L)
     file1.close()  # to change file access modes.
-
-    """
+    print(input_file_path+"/"+output_file_path+".log file written.")
 
 
 def ret_parser():
@@ -422,6 +503,9 @@ def ret_parser():
         "--dat", type=int, default=0, help="use exisiting band.dat file"
     )
     parser.add_argument(
+        "--dat_type", type=int, default=1, help="which type of .dat file you are using (1 for sumo)"
+    )
+    parser.add_argument(
         "--vbcb", type=int, default=0, help="generate seprate files of selected bands"
     )
     return parser
@@ -430,17 +514,18 @@ def ret_parser():
 def main():
     #main starts from here 
 
-    print("___________________________")
-    print("|  Welcome, I'm Crystine   |")
-    print("___________________________")
+    print("___________________________________")
+    print("|     Hey there, I'm Crystine     |")
+    print("___________________________________")
 
 
-    input_file_path = './'  # Replace with your actual file path
+    input_file_path = '.'  # Replace with your actual file path
     #later rename the above file to OUTCAR
     output_file_path = "gmass"
     args = ret_parser().parse_args()
     # initiate(input_file_path, output_file_path,excel_gen=args.excel)
-    initiate(input_file_path, output_file_path,excel_gen=args.excel,use_existing_dat=args.dat,gen_vbcb_files=args.vbcb)
+    initiate(input_file_path, output_file_path,excel_gen=args.excel,use_existing_dat=args.dat,dat_type=args.dat_type,gen_vbcb_files=args.vbcb)
+
 
 if __name__ == "__main__":
     main()
