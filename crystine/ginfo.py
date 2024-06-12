@@ -191,10 +191,9 @@ def process_file(input_file, output_file,excel_gen):
 def main():
     #main starts from here 
 
-    print("___________________________")
-    print("|  Welcome, I'm Crystine   |")
-    print("___________________________")
-
+    print("___________________________________")
+    print("|     Hey there, I'm Crystine     |")
+    print("___________________________________")
 
     input_file_path = './OUTCAR'  # Replace with your actual file path
     #later rename the above file to OUTCAR

@@ -30,6 +30,6 @@ setup(
     ],
     author='Anand',
     author_email='anandsr724@gmail.com',
-    description='data analysis for compuational chem',
+    description='A data analysis library for computational chemistry',
     python_requires='>=3.6',
 )

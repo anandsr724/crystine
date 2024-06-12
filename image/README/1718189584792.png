@@ -1,0 +1,42 @@
+<div align="center">
+  <img src="https://www.tensorflow.org/images/tf_logo_horizontal.png">
+</div>
+
+[![PyPI](https://badge.fury.io/py/crystine.svg)](https://badge.fury.io/py/crystine.svg)
+
+Crystine is a data analysis library for computational chemistry , which currently supports VASP.
+
+## Install
+
+To install the current release
+
+```
+$ pip install crystine
+```
+
+To update Crystine to the latest version, add `--upgrade` flag to the above
+command.
+
+## Usage
+
+Crystine supports command line arguements, once installed you can directly run one of the scrpits from the command line interface.
+
+Currently, Crystine can do the following tasks :
+
+* `crystine-ginfo`: For generating VASP KPOINTS files along high-symmetry k-point paths.
+* `crystine-gmass`: For plotting publication-ready electronic band structure diagrams.
+
+#### *Try your first TensorFlow program*
+
+```shell
+$ python
+```
+
+```python
+>>> import tensorflow as tf
+>>> tf.add(1, 2).numpy()
+3
+>>> hello = tf.constant('Hello, TensorFlow!')
+>>> hello.numpy()
+b'Hello, TensorFlow!'
+```

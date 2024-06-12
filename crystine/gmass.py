@@ -20,7 +20,7 @@ def animate():
         sys.stdout.write('\rloading ' + c)
         sys.stdout.flush()
         time.sleep(0.1)
-    sys.stdout.write('\rDone! ')
+    sys.stdout.write('\r                ')
     sys.stdout.write('\n')
 
 
@@ -468,6 +468,9 @@ def initiate(input_file_path="./", output_file_path = "gmass" ,excel_gen=0,use_e
     vb_back_mass,vb_back_eq=mass_cal(vb_back,"VB_back")
     vb_next_mass,vb_next_eq=mass_cal(vb_next,"VB_next")
     print("- - - - -")
+
+    print("Generating polyfit images..")
+
     # print('CB Back\n', cb_back )
     # print('- - -')
     # print('CB Next\n', cb_next )
@@ -476,8 +479,6 @@ def initiate(input_file_path="./", output_file_path = "gmass" ,excel_gen=0,use_e
     # print('- - -')
     # print('VB Next\n', vb_next )
     # print('- - -')
-
-    
     
 
     file1 = open(input_file_path+"/"+output_file_path+".log", "w")
