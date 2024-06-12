@@ -15,7 +15,8 @@ setup(
         'console_scripts': [
             'swap1=crystine.swap1:main',
             'swap2=crystine.swap2:main',
-            'ginfo=crystine.ginfo:main',
+            'crystine-ginfo=crystine.ginfo:main',
+            'crystine-gmass=crystine.gmass:main',
             
         ],
     },
@@ -24,6 +25,7 @@ setup(
         "numpy",
         "scipy",
         "matplotlib>=3.2.0",
+        "pymatgen",
        
     ],
     author='Anand',
