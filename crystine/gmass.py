@@ -520,10 +520,10 @@ def ret_parser():
         "--vbcb", type=int, default=0, help="generate seprate files of selected bands"
     )
     parser.add_argument(
-        "--shift_vb", type=int, default=0, help="chose another vb, if you are getting inf / None in the mass  "
+        "--shift_vb", type=int, default=0, help="choose another vb, if you are getting inf / None in the mass  "
     )
     parser.add_argument(
-        "--shift_cb", type=int, default=0, help="chose another vb, if you are getting inf / None in the mass  "
+        "--shift_cb", type=int, default=0, help="choose another vb, if you are getting inf / None in the mass  "
     )
     #shift vb or cb are positive nunbers , thse no are added in cb and subtracted from vb
     return parser

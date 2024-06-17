@@ -51,6 +51,20 @@ Default: 1
 use exisiting band.dat file , else the code generates its own .dat file
 
 Default: 0
+
+--shift_vb,
+choose another vb , do this if you are getting inf / None in the mass
+
+Default: 0
+
+--shift_cb,
+choose another cb, do this if you are getting inf / None in the mass
+
+Default: 0
+
+Note:
+shift vb or cb are positive nunbers , absolute value of these numbers are added in cb and subtracted from vb.
+  
 ```
 
 #### *Example*
