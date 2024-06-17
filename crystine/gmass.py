@@ -313,7 +313,7 @@ import sys
 
 
 
-def info_from_dat(input_file_path,use_existing_dat=0,dat_type=1):
+def info_from_dat(input_file_path,use_existing_dat=0,dat_type=1,shift_cb=0,shift_vb=0):
     
     # using_sumo =1 
     
@@ -360,6 +360,16 @@ def info_from_dat(input_file_path,use_existing_dat=0,dat_type=1):
     print('VB is ', vb)
     print('CB is ', cb)
     print('- - - - -')
+    ###
+    #inf mass fix
+    vb=vb-abs(shift_vb)
+    cb=cb+abs(shift_cb)
+    ###
+    if (shift_vb !=0 or shift_cb!=0):
+        print("Updating index of VB , CB now ")
+        print('VB is ', vb)
+        print('CB is ', cb)
+        print('- - - - -')
 
     #customise this part for type 2 .dat file
     data = np.loadtxt(parent_datPath)
@@ -385,7 +395,7 @@ def info_from_dat(input_file_path,use_existing_dat=0,dat_type=1):
     return df_vbm , df_cbm
 
 
-def initiate(input_file_path="./", output_file_path = "gmass" ,excel_gen=0,use_existing_dat=1,dat_type=1,gen_vbcb_files=1):
+def initiate(input_file_path="./", output_file_path = "gmass" ,excel_gen=0,use_existing_dat=1,dat_type=1,gen_vbcb_files=1,shift_cb=0,shift_vb=0):
 
     ################################################
     #take input
@@ -416,7 +426,7 @@ def initiate(input_file_path="./", output_file_path = "gmass" ,excel_gen=0,use_e
     # data extracted from OUTCAR 
     ###
 
-    df_vbm , df_cbm  = info_from_dat(input_file_path,use_existing_dat,dat_type)
+    df_vbm , df_cbm  = info_from_dat(input_file_path,use_existing_dat,dat_type,shift_cb,shift_vb)
 
     # after the data is loaded into df code will handle
 
@@ -509,6 +519,13 @@ def ret_parser():
     parser.add_argument(
         "--vbcb", type=int, default=0, help="generate seprate files of selected bands"
     )
+    parser.add_argument(
+        "--shift_vb", type=int, default=0, help="chose another vb, if you are getting inf / None in the mass  "
+    )
+    parser.add_argument(
+        "--shift_cb", type=int, default=0, help="chose another vb, if you are getting inf / None in the mass  "
+    )
+    #shift vb or cb are positive nunbers , thse no are added in cb and subtracted from vb
     return parser
 
 
@@ -525,7 +542,7 @@ def main():
     output_file_path = "gmass"
     args = ret_parser().parse_args()
     # initiate(input_file_path, output_file_path,excel_gen=args.excel)
-    initiate(input_file_path, output_file_path,excel_gen=args.excel,use_existing_dat=args.dat,dat_type=args.dat_type,gen_vbcb_files=args.vbcb)
+    initiate(input_file_path, output_file_path,excel_gen=args.excel,use_existing_dat=args.dat,dat_type=args.dat_type,gen_vbcb_files=args.vbcb,shift_cb=args.shift_cb,shift_vb=args.shift_vb)
 
 
 if __name__ == "__main__":
