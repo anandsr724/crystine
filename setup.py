@@ -9,7 +9,7 @@ classifiers=[
 
 setup(
     name='crystine',
-    version='0.2.2',
+    version='0.3.0',
     packages=find_packages(),
     entry_points={
         'console_scripts': [
@@ -17,6 +17,7 @@ setup(
             'swap2=crystine.swap2:main',
             'crystine-ginfo=crystine.ginfo:main',
             'crystine-gmass=crystine.gmass:main',
+            'crystine-galign=crystine.galign:main',
             
         ],
     },
