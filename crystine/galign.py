@@ -130,7 +130,7 @@ def process_file(input_file_path ,
     plt.gca().invert_yaxis()
 
   plt.tight_layout()
-  # plt.savefig(output_file_path,transparent=False,dpi=600)
+  plt.savefig(output_file_path,transparent=False,dpi=600)
   plt.show()
 
 
